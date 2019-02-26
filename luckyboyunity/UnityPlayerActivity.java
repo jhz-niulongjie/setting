@@ -228,7 +228,7 @@ public class UnityPlayerActivity extends Activity
             message.setUrl(Constants.GetIPAddress(Constants.IpTypeLuck.PayStatus));
             message.append("robotId", getRobotId());
             message.append("orderNo", orderNo);
-			message.setEncryption(true);
+			//message.setEncryption(true);
             NetClient.getInstance(this).sendNetMessage(message, new BaseSendRequestListener() {
                 @Override
                 public void onSuccess(NetMessage message, String result) {
@@ -243,7 +243,7 @@ public class UnityPlayerActivity extends Activity
                                 isPay=true;
                                 count=0;
                                 openId=jsonObject.optString("openId");
-                                String paytime=jsonObject.optString("winningLevel")+"|"+openId;
+                                String paytime=jsonObject.optString("winningLevel")+"|"+openId+"|"+jsonObject.optString("data");
                                 if(isForeground)
                                 {
                                     UnityPlayer.UnitySendMessage("AndroidCallUnity","PaySuccess",paytime);
@@ -299,7 +299,7 @@ public class UnityPlayerActivity extends Activity
             message.setUrl(Constants.GetIPAddress(Constants.IpTypeLuck.QrCode));
             message.append("robotId", getRobotId());
             NetClient.getInstance(this).setConnectTimeout(3, TimeUnit.SECONDS);
-			message.setEncryption(true);
+			//message.setEncryption(true);
             NetClient.getInstance(this).sendNetMessage(message, new BaseSendRequestListener() {
                 @Override
                 public void onSuccess(NetMessage message, String result) {
@@ -352,7 +352,7 @@ public class UnityPlayerActivity extends Activity
             message.setRequestMethod(TextMessage.REQUEST_METHOD_POST);
             message.setUrl(Constants.GetIPAddress(Constants.IpTypeLuck.Probability));
             message.append("robotId", getRobotId());
-			message.setEncryption(true);
+			//message.setEncryption(true);
             NetClient.getInstance(this).sendNetMessage(message, new BaseSendRequestListener() {
                 @Override
                 public void onSuccess(NetMessage message, String result) {
@@ -419,7 +419,7 @@ public class UnityPlayerActivity extends Activity
             message.append("reportTime",catchTime);
             message.append("openId",openId);
             message.append("applyRechargeId",orderNumber);
-			message.setEncryption(true);
+			//message.setEncryption(true);
             L.d(TAG, "SendCatchRecord status=" +number+" reportTime="+catchTime+" openId="+openId);
             NetClient.getInstance(this).sendNetMessage(message, new BaseSendRequestListener() {
                 @Override
@@ -467,7 +467,7 @@ public class UnityPlayerActivity extends Activity
             message.setUrl(Constants.GetIPAddress(Constants.IpTypeLuck.RecordList));
             JSONArray array=new JSONArray(catchlist);
             message.append("list", array);
-            message.setEncryption(true);
+            //message.setEncryption(true);
             L.d(TAG, "SendCatchRecordList list="+array);
             NetClient.getInstance(this).sendNetMessage(message, new BaseSendRequestListener() {
                 @Override
@@ -522,7 +522,7 @@ public class UnityPlayerActivity extends Activity
             message.append("reportTime",catchTime);
             message.append("openId",tempStr);
             message.append("applyRechargeId",tempStr);
-            message.setEncryption(true);
+            //message.setEncryption(true);
             L.d(TAG, "Q_UpRecord status=" +number+" reportTime="+catchTime+" openId="+tempStr);
             NetClient.getInstance(this).sendNetMessage(message, new BaseSendRequestListener() {
                 @Override

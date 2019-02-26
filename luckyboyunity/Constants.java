@@ -54,18 +54,20 @@ public class Constants {
     private static final String URL_TYPE_OUT_CONFIG_PATH= ROOT_PATH + "robot_url_out.config";
 
     private  static final  String FiveRoundConfig=Environment.getExternalStorageDirectory() + "/.config/.efrobot/game_config";
-
-    private static  final String Test_IP="http://39.106.250.170:8083/api/v2/interface/doll/";
+      //原测试网址
+   //private static  final String Test_IP="http://39.106.250.170:8083/api/v2/interface/doll/";
+    //新测试地址
+    private static  final String Test_IP="http://net.wxservice.efrobot.com/v1/";
     private static  final  String IP="http://backend.efrobot.com/api/v2/interface/doll/";
-    public  static  final  String LuckPayStatus="getPayStatus";
+    public  static  final  String LuckPayStatus="wxluckDraw/getLuckDrawStatus";
 
-    public  static  final  String LuckDrawQrCode="getPayQRCode";
+    public  static  final  String LuckDrawQrCode="wxluckDraw/getLuckDrawQrCode";
 
-    public  static  final  String LuckCatchProbability="getDollProbability";
+    public  static  final  String LuckCatchProbability="intranet_grab/queryGrabProbability";
 
-    public  static  final  String LuckCatchRecord="reportCrawlRecord";
+    public  static  final  String LuckCatchRecord="intranet_grab/insertGrabRecord";
 
-    public  static  final  String LuckCatchRecordList="reportBatchCrawlRecord";
+    public  static  final  String LuckCatchRecordList="intranet_grab/insertBatchGrabRecord";
 
     private  static   String    ReadSettingValue="";
 
@@ -128,8 +130,8 @@ public class Constants {
    //设置中的数据
     public  static String  GetGameModeData()
     {
-       // 支付模式|三局|5个题目|pass 3|进入游戏|抓娃娃游戏
-        String[] values=new String[]{"0","3","5","3","0","0"};
+       // 支付模式|三局|5个题目|pass 3|进入游戏|抓娃娃游戏|开启礼品模式 0
+        String[] values=new String[]{"0","3","5","3","0","0","0"};
         try {
             if(ReadSettingValue==null||ReadSettingValue=="") {
                 ReadSettingValue = ReadSettingValueFun();
@@ -155,6 +157,9 @@ public class Constants {
                 }
                 if(jsonObject.has("game_type")) {
                     values[5]=jsonObject.optString("game_type");//游戏类型 0抓娃娃  1幸运转转
+                }
+                if(jsonObject.has("reward")) {
+                    values[6]=jsonObject.optString("reward");//开启礼品模式 为0 关闭 为1
                 }
             }
         }
