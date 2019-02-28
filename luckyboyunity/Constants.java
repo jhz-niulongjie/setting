@@ -55,10 +55,13 @@ public class Constants {
 
     private  static final  String FiveRoundConfig=Environment.getExternalStorageDirectory() + "/.config/.efrobot/game_config";
       //原测试网址
-   //private static  final String Test_IP="http://39.106.250.170:8083/api/v2/interface/doll/";
+    //private static  final String Test_IP="http://39.106.250.170:8083/api/v2/interface/doll/";
+      //原正试网址
+      // private static  final  String IP="http://backend.efrobot.com/api/v2/interface/doll/";
     //新测试地址
     private static  final String Test_IP="http://net.wxservice.efrobot.com/v1/";
-    private static  final  String IP="http://backend.efrobot.com/api/v2/interface/doll/";
+    //新正式地址
+    private static  final  String IP="http://gift.game.efrobot.com/v1/";
     public  static  final  String LuckPayStatus="wxluckDraw/getLuckDrawStatus";
 
     public  static  final  String LuckDrawQrCode="wxluckDraw/getLuckDrawQrCode";
