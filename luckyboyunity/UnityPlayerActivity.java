@@ -11,6 +11,8 @@ import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.graphics.PixelFormat;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
@@ -47,28 +49,7 @@ import com.efrobot.claw.game.sdk.*;
 
 public class UnityPlayerActivity extends Activity
 {
-
-    Handler handler=new Handler(){
-        @Override
-        public void dispatchMessage(Message msg) {
-            super.dispatchMessage(msg);
-            switch (msg.what){
-                case 1:
-                    SendCatchRecord(isCarw,carwTime);
-                    break;
-                case 2:
-                    GetPayStatus(orderNumber,true);
-                    break;
-                case 3:
-                    finish();
-                case 4:
-                    break;
-            }
-        }
-    };
-
     protected UnityPlayer mUnityPlayer; // don't change the name of this variable; referenced from native code
-
     private   AlertObject alerObj;
     private   BaseHandler mBaseHandler;
     private   boolean canPlay = false;
@@ -207,356 +188,8 @@ public class UnityPlayerActivity extends Activity
     // Pass any events not handled by (unfocused) views straight to UnityPlayer
     @Override public boolean onKeyUp(int keyCode, KeyEvent event)     { return mUnityPlayer.injectEvent(event); }
     @Override public boolean onKeyDown(int keyCode, KeyEvent event)   { return mUnityPlayer.injectEvent(event); }
-    @Override public boolean onTouchEvent(MotionEvent event)          { return mUnityPlayer.injectEvent(event); }
+   // @Override public boolean onTouchEvent(MotionEvent event)          { return mUnityPlayer.injectEvent(event); }
     /*API12*/ public boolean onGenericMotionEvent(MotionEvent event)  { return mUnityPlayer.injectEvent(event); }
-
-    public void GetPayStatus(String orderNo,boolean isFirst) {
-        L.d("GetPayStatus", "unity调用了GetPayStatus方法   orderNo:"+orderNo);
-        final boolean  isfirst=isFirst;
-        if (!NetUtil.checkNet(this)){
-            L.d(TAG, "no network");
-            if(isfirst) {
-                SpeakWords("没有网络，请联网后再试");
-                handler.sendEmptyMessageDelayed(3, 3 * 1000);
-            }
-            return;
-        }
-        try {
-            orderNumber=orderNo;
-            TextMessage message = new TextMessage();
-            message.setRequestMethod(TextMessage.REQUEST_METHOD_POST);
-            message.setUrl(Constants.GetIPAddress(Constants.IpTypeLuck.PayStatus));
-            message.append("robotId", getRobotId());
-            message.append("orderNo", orderNo);
-			//message.setEncryption(true);
-            NetClient.getInstance(this).sendNetMessage(message, new BaseSendRequestListener() {
-                @Override
-                public void onSuccess(NetMessage message, String result) {
-                    super.onSuccess(message, result);
-                    L.d(TAG, "GetPayStatus  result=" + result);
-                    JSONObject jsonObject = null;
-                    try {
-                        jsonObject = new JSONObject(result);
-                        if (jsonObject.has("resultCode") && jsonObject.getString("resultCode").equals("SUCCESS")) {
-                            String status = jsonObject.optString("status");
-                            if (!status.isEmpty() && status.equals("1")) {//支付完成 开始游戏
-                                isPay=true;
-                                count=0;
-                                openId=jsonObject.optString("openId");
-                                String paytime=jsonObject.optString("winningLevel")+"|"+openId+"|"+jsonObject.optString("data");
-                                if(isForeground)
-                                {
-                                    UnityPlayer.UnitySendMessage("AndroidCallUnity","PaySuccess",paytime);
-                                }
-                            }
-                            else
-                            {
-                                if(isfirst)
-                                   UnityPlayer.UnitySendMessage("AndroidCallUnity","AndroidCall","NoPay");
-                            }
-                        }
-                        else
-                        {
-                            if(isfirst)
-                                UnityPlayer.UnitySendMessage("AndroidCallUnity","AndroidCall","NoPay");
-                        }
-                    } catch (JSONException e) {
-                        e.printStackTrace();
-                        L.d(TAG, "GetPayStatus  解析错误:"+e.getMessage());
-                    }
-                }
-
-                @Override
-                public void onFail(NetMessage message, int errorCode, String errorMessage) {
-                    super.onFail(message, errorCode, errorMessage);
-                    L.d(TAG, "GetPayStatus  onFail  errorCode=" + errorCode+" errorMessage="+errorMessage);
-                    if(!isfirst)return;
-                    if(count!=3) {
-                        count++;
-                        handler.sendEmptyMessageDelayed(2, 3 * 1000);
-                    }else{
-                        UnityPlayer.UnitySendMessage("AndroidCallUnity","AndroidCall","Error");
-                        count=0;
-                    }
-                }
-            });
-        } catch (JSONException e) {
-            e.printStackTrace();
-
-        }
-
-    }
-
-    public void GetDrawQrCode() {
-        L.d("GetDrawQrCode", "unity调用了GetDrawQrCode方法");
-        if (!NetUtil.checkNet(this)) {
-            L.d(TAG, "no network");
-            return;
-        }
-        try {
-            TextMessage message = new TextMessage();
-            message.setRequestMethod(TextMessage.REQUEST_METHOD_POST);
-            message.setUrl(Constants.GetIPAddress(Constants.IpTypeLuck.QrCode));
-            message.append("robotId", getRobotId());
-            NetClient.getInstance(this).setConnectTimeout(3, TimeUnit.SECONDS);
-			//message.setEncryption(true);
-            NetClient.getInstance(this).sendNetMessage(message, new BaseSendRequestListener() {
-                @Override
-                public void onSuccess(NetMessage message, String result) {
-                    super.onSuccess(message, result);
-                    L.d(TAG, "GetDrawQrCode result=" + result);
-                    JSONObject jsonObject = null;
-                    try {
-                        jsonObject = new JSONObject(result);
-                        if (jsonObject.has("resultCode"))
-                        {
-                            if (jsonObject.getString("resultCode").equals("SUCCESS")) {
-                                String urlStr = jsonObject.optString("qrUrl");
-                                String orderNo = jsonObject.optString("orderNo");
-                                String msg=urlStr+"|"+orderNo+"|"+getRobotId();
-                                UnityPlayer.UnitySendMessage("AndroidCallUnity", "QRCodeCall", msg);
-                            }
-                            else if(jsonObject.getString("resultCode").equals("NO_DOLL_ROBOT")||
-                                    jsonObject.getString("resultCode").equals("ACTIVE_ROBOT"))
-                            {
-                                UnityPlayer.UnitySendMessage("AndroidCallUnity","AndroidCall","NoBind");
-                            }
-                        }
-                    } catch (JSONException e) {
-                        e.printStackTrace();
-                        L.d(TAG, "GetDrawQrCode  解析错误:"+e.getMessage());
-                    }
-                }
-
-                @Override
-                public void onFail(NetMessage message, int errorCode, String errorMessage) {
-                    super.onFail(message, errorCode, errorMessage);
-                    L.d(TAG, "GetDrawQrCode  onFail   errorCode=" + errorCode+" errorMessage="+errorMessage);
-                }
-            });
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-    }
-
-   //获得概率值
-    public void GetProbabilityValue()
-    {
-        L.d("GetProbabilityValue", "unity调用了GetProbabilityValue方法");
-        if (!NetUtil.checkNet(this)) {
-            L.d(TAG, "no network");
-            return;
-        }
-        try {
-            TextMessage message = new TextMessage();
-            message.setRequestMethod(TextMessage.REQUEST_METHOD_POST);
-            message.setUrl(Constants.GetIPAddress(Constants.IpTypeLuck.Probability));
-            message.append("robotId", getRobotId());
-			//message.setEncryption(true);
-            NetClient.getInstance(this).sendNetMessage(message, new BaseSendRequestListener() {
-                @Override
-                public void onSuccess(NetMessage message, String result) {
-                    super.onSuccess(message, result);
-                    L.d(TAG, "GetProbabilityValue result=" + result);
-                    JSONObject jsonObject = null;
-                    try {
-                        jsonObject = new JSONObject(result);
-                        if (jsonObject.has("resultCode"))
-                        {
-                            if (jsonObject.getString("resultCode").equals("SUCCESS")) {
-                                String data=jsonObject.optString("data");//概率值
-                                jsonObject = new JSONObject(data);
-                                String probaValue = jsonObject.optString("captureProb");//概率值
-                                String winging = jsonObject.optString("captureStepNum");//中奖值
-                                String carwBasic = jsonObject.optString("captureStepLenght");//基数
-                                String money=jsonObject.optString("qrAmount");//金额
-                                String pwVV=probaValue+"|"+winging+"|"+carwBasic+"|"+money;
-                                UnityPlayer.UnitySendMessage("AndroidCallUnity","GetProbabilityCall",pwVV);
-                            }
-                            else if(jsonObject.getString("resultCode").equals("NO_DOLL_ROBOT")||
-                                    jsonObject.getString("resultCode").equals("ACTIVE_ROBOT"))
-                            {
-                                UnityPlayer.UnitySendMessage("AndroidCallUnity","AndroidCall","NoBind");
-                            }
-                        }
-
-                    } catch (JSONException e) {
-                        e.printStackTrace();
-                        L.d(TAG, "GetProbabilityValue  解析错误:"+e.getMessage());
-                    }
-                }
-
-                @Override
-                public void onFail(NetMessage message, int errorCode, String errorMessage) {
-                    super.onFail(message, errorCode, errorMessage);
-                    L.d(TAG, "GetProbabilityValue  onFail  errorCode=" + errorCode+" errorMessage="+errorMessage);
-                }
-            });
-        } catch (JSONException e) {
-            e.printStackTrace();
-           // UnityPlayer.UnitySendMessage("AndroidCallUnity","AndroidCall","Error");
-        }
-
-    }
-
-    //上报抓娃娃记录
-    public void SendCatchRecord(boolean isCatch, String catchTime)
-    {
-        L.d("SendCatchRecord", "unity调用了SendCatchRecord方法");
-        isCarw=isCatch;
-        carwTime=catchTime;
-        int number=isCatch?1:0;
-        if (!NetUtil.checkNet(this)) {
-            L.d(TAG, "no network");
-            return;
-        }
-        try {
-            TextMessage message = new TextMessage();
-            message.setRequestMethod(TextMessage.REQUEST_METHOD_POST);
-            message.setUrl(Constants.GetIPAddress(Constants.IpTypeLuck.Record));
-            message.append("robotId", getRobotId());
-            message.append("status",number);
-            message.append("reportTime",catchTime);
-            message.append("openId",openId);
-            message.append("applyRechargeId",orderNumber);
-			//message.setEncryption(true);
-            L.d(TAG, "SendCatchRecord status=" +number+" reportTime="+catchTime+" openId="+openId);
-            NetClient.getInstance(this).sendNetMessage(message, new BaseSendRequestListener() {
-                @Override
-                public void onSuccess(NetMessage message, String result) {
-                    super.onSuccess(message, result);
-                    L.d(TAG, "SendCatchRecord result=" + result);
-                    JSONObject jsonObject = null;
-                    count=0;
-                    try {
-                        jsonObject = new JSONObject(result);
-                        if (jsonObject.has("resultCode") && jsonObject.getString("resultCode").equals("SUCCESS")) {
-                            isCarw=false;
-                            carwTime="";
-                        }
-
-                    } catch (JSONException e) {
-                        e.printStackTrace();
-                        L.d(TAG, "SendCatchRecord  解析错误:"+e.getMessage());
-                    }
-                }
-
-                @Override
-                public void onFail(NetMessage message, int errorCode, String errorMessage) {
-                    super.onFail(message, errorCode, errorMessage);
-                    L.d(TAG, "SendCatchRecord  onFail  errorCode=" + errorCode+" errorMessage="+errorMessage);
-                    UnityPlayer.UnitySendMessage("AndroidCallUnity", "AndroidCall", "UpRecordFail");
-                }
-            });
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-
-    }
-
-    public void SendCatchRecordList(String  catchlist)
-    {
-        L.d("SendCatchRecordList", "unity调用了SendCatchRecordList方法");
-        if (!NetUtil.checkNet(this)) {
-            L.d(TAG, "no network");
-            return;
-        }
-        try {
-            TextMessage message = new TextMessage();
-            message.setRequestMethod(TextMessage.REQUEST_METHOD_POST);
-            message.setUrl(Constants.GetIPAddress(Constants.IpTypeLuck.RecordList));
-            JSONArray array=new JSONArray(catchlist);
-            message.append("list", array);
-            //message.setEncryption(true);
-            L.d(TAG, "SendCatchRecordList list="+array);
-            NetClient.getInstance(this).sendNetMessage(message, new BaseSendRequestListener() {
-                @Override
-                public void onSuccess(NetMessage message, String result) {
-                    super.onSuccess(message, result);
-                    L.d(TAG, "SendCatchRecordList result=" + result);
-                    JSONObject jsonObject = null;
-                    try {
-                        jsonObject = new JSONObject(result);
-                        if (jsonObject.has("resultCode") && jsonObject.getString("resultCode").equals("SUCCESS")) {
-                            UnityPlayer.UnitySendMessage("AndroidCallUnity", "AndroidCall", "UpRecordListSuccess");
-                        }
-
-                    } catch (JSONException e) {
-                        e.printStackTrace();
-                        L.d(TAG, "SendCatchRecordList  解析错误:"+e.getMessage());
-                    }
-                }
-
-                @Override
-                public void onFail(NetMessage message, int errorCode, String errorMessage) {
-                    super.onFail(message, errorCode, errorMessage);
-                    L.d(TAG, "SendCatchRecordList  onFail  errorCode=" + errorCode+" errorMessage="+errorMessage);
-                }
-            });
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-
-
-    }
-
-
-    //上报抓娃娃记录
-    public void Q_UpRecord(boolean isCatch, String catchTime,String q_catchTime)
-    {
-        L.d("Q_UpRecord", "unity调用了Q_UpRecord方法");
-        isCarw=isCatch;
-        carwTime=catchTime;
-        int number=isCatch?1:0;
-        if (!NetUtil.checkNet(this)) {
-            L.d(TAG, "no network");
-            return;
-        }
-        try {
-            String tempStr="ANS"+q_catchTime;
-            TextMessage message = new TextMessage();
-            message.setRequestMethod(TextMessage.REQUEST_METHOD_POST);
-            message.setUrl(Constants.GetIPAddress(Constants.IpTypeLuck.Record));
-            message.append("robotId", getRobotId());
-            message.append("status",number);
-            message.append("reportTime",catchTime);
-            message.append("openId",tempStr);
-            message.append("applyRechargeId",tempStr);
-            //message.setEncryption(true);
-            L.d(TAG, "Q_UpRecord status=" +number+" reportTime="+catchTime+" openId="+tempStr);
-            NetClient.getInstance(this).sendNetMessage(message, new BaseSendRequestListener() {
-                @Override
-                public void onSuccess(NetMessage message, String result) {
-                    super.onSuccess(message, result);
-                    L.d(TAG, "Q_UpRecord result=" + result);
-                    JSONObject jsonObject = null;
-                    count=0;
-                    try {
-                        jsonObject = new JSONObject(result);
-                        if (jsonObject.has("resultCode") && jsonObject.getString("resultCode").equals("SUCCESS")) {
-                            isCarw=false;
-                            carwTime="";
-                        }
-
-                    } catch (JSONException e) {
-                        e.printStackTrace();
-                        L.d(TAG, "Q_UpRecord  解析错误:"+e.getMessage());
-                    }
-                }
-
-                @Override
-                public void onFail(NetMessage message, int errorCode, String errorMessage) {
-                    super.onFail(message, errorCode, errorMessage);
-                    L.d(TAG, "Q_UpRecord  onFail  errorCode=" + errorCode+" errorMessage="+errorMessage);
-                    UnityPlayer.UnitySendMessage("AndroidCallUnity", "AndroidCall", "UpRecordFail");
-                }
-            });
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-
-    }
-
 
     public String getRobotId() {
         //获取小胖唯一编码
@@ -625,7 +258,7 @@ public class UnityPlayerActivity extends Activity
 
         }
 
-//自动出礼物
+   //自动出礼物
     public  void AutoPresent()
     {
         //ClawGameManager.getInstance(getApplicationContext()).getControlManagerInstance(getApplicationContext()).pushRod();
@@ -639,15 +272,6 @@ public class UnityPlayerActivity extends Activity
           //UnityPlayer.UnitySendMessage("AndroidCallUnity","AndroidCall","NoHas");
             return false;
         }
-        return  true;
-    }
-   //出口是否有东西
-    public  boolean isTakeAway()
-    {
-       // if(ClawGameManager.getInstance(getApplicationContext()).checkDollTakeAway() != ClawGameStatus.VALUE_DOLL_ALL_TAKE_AWAY)
-       // {
-       //     return  false;
-       // }
         return  true;
     }
     //获得游戏模式
@@ -671,36 +295,8 @@ public class UnityPlayerActivity extends Activity
 
     //关闭Splash页面
     public  void  HideSplash(){ Splash.getInstance().onHideSplash();}
-
-
-    public void CustomQuit()
-    {
-        L.d("CustomQuit", "开始退出");
-        moveTaskToBack(true);
-        isForeground=false;
-        timer.schedule(new TimerTask() {
-            public void run() {
-                if(times<=0&&!isPay)
-               {
-                  L.d("CustomQuit", "没有支付游戏推出");
-                  finish();
-               }
-               else
-               {
-                   if(!isPay) {
-                       GetPayStatus(orderNumber,false);
-                   }
-                   else {
-                       L.d("timer", "已支付完成");
-                       MoveForeground();
-                       timer.cancel();
-                   }
-               }
-                times=times-1;
-            }
-        },0, 1000);// 这里百毫秒
-
-    }
+    //是否测试环境
+    public  boolean IsText(){return  Constants.IsText();}
 
     //选择进入那个游戏
     public String SelectGame(){ return Constants.SelectGame();}
@@ -709,122 +305,6 @@ public class UnityPlayerActivity extends Activity
     public  String GetOnSaleNumberData(){ return   alerObj.jsonOnSaleContent();}
     //更新优惠券状态
     public  void UpdateOnSaleValue(String id){ alerObj.updateOnSaleValue(id);}
-
-    public void GetPayStatusSendPhone(String orderNo)
-    {
-        L.d("GetPayStatusSendPhone", "unity调用了GetPayStatusSendPhone方法   orderNo:"+orderNo);
-        if (!NetUtil.checkNet(this)){
-            L.d(TAG, "no network");
-            SpeakWords("没有网络，请联网后再试");
-            handler.sendEmptyMessageDelayed(3, 3 * 1000);
-            return;
-        }
-        try {
-            orderNumber=orderNo;
-            TextMessage message = new TextMessage();
-            message.setRequestMethod(TextMessage.REQUEST_METHOD_POST);
-            message.setUrl(Constants.GetIPAddressPhone(Constants.IpTypeLuck.PhonePayStatus));
-            message.append("robotId", getRobotId());
-            message.append("orderNo", orderNo);
-           // message.setEncryption(true);
-            NetClient.getInstance(this).sendNetMessage(message, new BaseSendRequestListener() {
-                @Override
-                public void onSuccess(NetMessage message, String result) {
-                    super.onSuccess(message, result);
-                    L.d(TAG, "GetPayStatusSendPhone  result=" + result);
-                    JSONObject jsonObject = null;
-                    try {
-                        jsonObject = new JSONObject(result);
-                        if (jsonObject.has("resultCode") && jsonObject.getString("resultCode").equals("SUCCESS")) {
-                            String status = jsonObject.optString("status");
-                            if (!status.isEmpty() && status.equals("1")) {//支付完成 开始游戏
-                                isPay=true;
-                                count=0;
-                                openId=jsonObject.optString("openId");
-                                String paydata=openId+"|"+jsonObject.optString("data");
-                                if(isForeground)
-                                {
-                                    UnityPlayer.UnitySendMessage("AndroidCallUnity","PaySuccess",paydata);
-                                }
-                            }
-                        }
-                    } catch (JSONException e) {
-                        e.printStackTrace();
-                        L.d(TAG, "GetPayStatusSendPhone  解析错误:"+e.getMessage());
-                    }
-                }
-                @Override
-                public void onFail(NetMessage message, int errorCode, String errorMessage) {
-                    super.onFail(message, errorCode, errorMessage);
-                    L.d(TAG, "GetPayStatusSendPhone  onFail  errorCode=" + errorCode+" errorMessage="+errorMessage);
-                    if(count!=3) {
-                        count++;
-                        handler.sendEmptyMessageDelayed(2, 3 * 1000);
-                    }else{
-                        UnityPlayer.UnitySendMessage("AndroidCallUnity","AndroidCall","Error");
-                        count=0;
-                    }
-                }
-            });
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-    }
-    //获得兑换码
-    public  void ResPhoneCode(String totalOrder)
-    {
-        L.d("ResPhoneCode", "unity调用了ResPhoneCode方法");
-        if (!NetUtil.checkNet(this)) {
-            L.d(TAG, "no network");
-            return;
-        }
-        try {
-            TextMessage message = new TextMessage();
-            message.setRequestMethod(TextMessage.REQUEST_METHOD_POST);
-            message.setUrl(Constants.GetIPAddressPhone(Constants.IpTypeLuck.PhoneSendCode));
-            message.append("openId", openId);
-            message.append("robotId", getRobotId());
-            message.append("totalOrder",totalOrder);
-            NetClient.getInstance(this).setConnectTimeout(5, TimeUnit.SECONDS);
-           // message.setEncryption(true);
-            NetClient.getInstance(this).sendNetMessage(message, new BaseSendRequestListener() {
-                @Override
-                public void onSuccess(NetMessage message, String result) {
-                    super.onSuccess(message, result);
-                    L.d(TAG, "ResPhoneCode result=" + result);
-                    JSONObject jsonObject = null;
-                    try {
-                        jsonObject = new JSONObject(result);
-                        if (jsonObject.has("resultCode"))
-                        {
-                            if (jsonObject.getString("resultCode").equals("SUCCESS")) {
-                                String phonecode = jsonObject.optString("code");
-                                UnityPlayer.UnitySendMessage("AndroidCallUnity", "Question_Wing", phonecode);
-                            }
-                            else if(jsonObject.getString("resultCode").equals("NO_DOLL_ROBOT")||
-                                    jsonObject.getString("resultCode").equals("ACTIVE_ROBOT"))
-                            {
-                                UnityPlayer.UnitySendMessage("AndroidCallUnity","AndroidCall","NoBind");
-                            }
-                        }
-                    } catch (JSONException e) {
-                        e.printStackTrace();
-                        L.d(TAG, "ResPhoneCode  解析错误:"+e.getMessage());
-                    }
-                }
-
-                @Override
-                public void onFail(NetMessage message, int errorCode, String errorMessage) {
-                    super.onFail(message, errorCode, errorMessage);
-                    L.d(TAG, "ResPhoneCode  onFail   errorCode=" + errorCode+" errorMessage="+errorMessage);
-                }
-            });
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-    }
-
-
 
   //切到前台
     private  void  MoveForeground()
@@ -835,4 +315,198 @@ public class UnityPlayerActivity extends Activity
         am.moveTaskToFront(getTaskId(), ActivityManager.MOVE_TASK_WITH_HOME);
         UnityPlayer.UnitySendMessage("AndroidCallUnity","AndroidCall","PaySuccess");
     }
+
+    public void CustomQuit()
+    {
+        L.d("CustomQuit", "开始退出");
+        moveTaskToBack(true);
+        isForeground=false;
+        timer.schedule(new TimerTask() {
+            public void run() {
+                if(times<=0&&!isPay)
+                {
+                    L.d("CustomQuit", "没有支付游戏推出");
+                    finish();
+                }
+                else
+                {
+                    if(!isPay) {
+                       // GetPayStatus(orderNumber,false);
+                    }
+                    else {
+                        L.d("timer", "已支付完成");
+                        MoveForeground();
+                        timer.cancel();
+                    }
+                }
+                times=times-1;
+            }
+        },0, 1000);// 这里百毫秒
+
+    }
+
+
+
+    /********************** 下面是下来关闭游戏逻辑 ********************/
+
+    private long startTime = -1;
+    private long endTime = -1;
+    private int touchFirstId = -1;
+    private int touchSecondId = -1;
+    private float touchFirstStartX = -1;
+    private float touchFirstStartY = -1;
+    private float touchSecondStartX = -1;
+    private float touchSecondStartY = -1;
+    private float touchFirstEndX = -1;
+    private float touchFirstEndY = -1;
+    private float touchSecondEndX = -1;
+    private float touchSecondEndY = -1;
+
+    private void initTouchEventData() {
+        startTime = -1;
+        endTime = -1;
+        touchFirstId = -1;
+        touchSecondId = -1;
+        touchFirstStartX = -1;
+        touchFirstStartY = -1;
+        touchSecondStartX = -1;
+        touchSecondStartY = -1;
+        touchFirstEndX = -1;
+        touchFirstEndY = -1;
+        touchSecondEndX = -1;
+        touchSecondEndY = -1;
+    }
+
+    @Override
+    public boolean onTouchEvent(@NonNull MotionEvent event) {
+        switch (event.getActionMasked()) {
+            case MotionEvent.ACTION_DOWN:
+                Log.i(TAG, "viewSizeHandle: down"+event.getActionIndex());
+                Log.e(TAG, "onTouchEvent1: x = " + event.getX() + " , y = " + event.getY() );
+
+                initTouchEventData();
+                touchFirstId = event.getPointerId(event.getActionIndex());
+                startTime = System.currentTimeMillis();
+                touchFirstStartX = event.getX(event.getActionIndex());
+                touchFirstStartY = event.getY(event.getActionIndex());
+
+                if (!(touchFirstStartY < 30 && (touchFirstStartX > 1230 || touchFirstStartX < 70))) {
+                    initTouchEventData();
+                }
+
+                break;
+            case MotionEvent.ACTION_POINTER_DOWN:
+                Log.i(TAG, "viewSizeHandle: point down"+event.getActionIndex());
+
+                //第一个点没有记录
+                if (touchFirstId == -1) {
+                    initTouchEventData();
+                    break;
+                }
+
+                if (touchSecondId != -1 || System.currentTimeMillis() - startTime >= 500) {
+                    initTouchEventData();
+                    break;
+                }
+
+                touchSecondId = event.getPointerId(event.getActionIndex());
+                touchSecondStartX = event.getX(event.getActionIndex());
+                touchSecondStartY = event.getY(event.getActionIndex());
+
+                if (touchSecondStartY >= 30
+                        || (touchSecondStartX <= 1230 && touchSecondStartX >= 70)
+                        || (touchFirstStartX > 700 && touchSecondStartX > 700)
+                        || (touchFirstStartX < 700 && touchSecondStartX < 700)) {
+                    initTouchEventData();
+                }
+                break;
+            case MotionEvent.ACTION_MOVE:
+                Log.i(TAG, "viewSizeHandle-: move"+event.getActionIndex());
+                break;
+            case MotionEvent.ACTION_UP:
+                Log.i(TAG, "viewSizeHandle: up"+event.getActionIndex());
+                Log.e(TAG, "onTouchEvent2: x = " + event.getX() + " , y = " + event.getY() );
+
+                if (touchFirstId == -1 || touchSecondId == -1) {
+                    initTouchEventData();
+                    break;
+                }
+
+                int currentId = event.getPointerId(event.getActionIndex());
+
+                if (currentId == touchFirstId) {
+                    if (touchFirstEndX != -1) {
+                        initTouchEventData();
+                        break;
+                    }
+
+                    touchFirstEndX = event.getX(event.getActionIndex());
+                    touchFirstEndY = event.getY(event.getActionIndex());
+
+                    if (Math.abs(touchFirstEndX - touchFirstStartX) >= 70 || touchFirstEndY <= 750) {
+                        initTouchEventData();
+                        break;
+                    }
+                } else if (currentId == touchSecondId) {
+                    if (touchSecondEndX != -1) {
+                        initTouchEventData();
+                        break;
+                    }
+
+                    touchSecondEndX = event.getX(event.getActionIndex());
+                    touchSecondEndY = event.getY(event.getActionIndex());
+
+                    if (Math.abs(touchSecondEndX - touchSecondStartX) >= 70 || touchSecondEndY <= 750) {
+                        initTouchEventData();
+                        break;
+                    }
+                } else {
+                    initTouchEventData();
+                    break;
+                }
+
+                if (System.currentTimeMillis() - endTime < 500) {
+                    /******************关闭游戏逻辑*********************/
+
+                    UnityPlayer.UnitySendMessage("AndroidCallUnity","CodePageGameQuit","");
+
+                    /******************关闭游戏逻辑*********************/
+                    initTouchEventData();
+                }
+                break;
+            case MotionEvent.ACTION_POINTER_UP:
+                Log.i(TAG, "viewSizeHandle: point up"+event.getActionIndex());
+
+                if (touchFirstId == -1) break;
+
+                int pointerId = event.getPointerId(event.getActionIndex());
+
+                if (pointerId == touchFirstId) {
+                    touchFirstEndX = event.getX(event.getActionIndex());
+                    touchFirstEndY = event.getY(event.getActionIndex());
+
+                    if (Math.abs(touchFirstEndX - touchFirstStartX) >= 70 || touchFirstEndY <= 750) {
+                        initTouchEventData();
+                        break;
+                    }
+                } else if (pointerId == touchSecondId) {
+                    touchSecondEndX = event.getX(event.getActionIndex());
+                    touchSecondEndY = event.getY(event.getActionIndex());
+
+                    if (Math.abs(touchSecondEndX - touchSecondStartX) >= 70 || touchSecondEndY <= 750) {
+                        initTouchEventData();
+                        break;
+                    }
+                } else {
+                    initTouchEventData();
+                    break;
+                }
+
+                endTime = System.currentTimeMillis();
+
+                break;
+        }
+        return true;
+    }
+
 }

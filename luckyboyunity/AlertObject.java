@@ -96,7 +96,6 @@ public class AlertObject implements OnRobotStateChangeListener ,OnClawGameStatus
         // L.d("AlertObject", "JS调用了Android的wave方法");
         mBaseHandler.sendEmptyMessage(WAVE_UP);
         mBaseHandler.sendEmptyMessageDelayed(WAVE_STOP, time);
-
     }
 
     /**
@@ -127,7 +126,6 @@ public class AlertObject implements OnRobotStateChangeListener ,OnClawGameStatus
     }
 
 
-
     //发送语音
     private void hintSpeak(String content, Context context) {
         try {
@@ -150,7 +148,7 @@ public class AlertObject implements OnRobotStateChangeListener ,OnClawGameStatus
         if (newState != RobotState.HEADKEY_STATE_UP) {
                Log.d(TAG, "头部按钮按下----isAppQuit:"+isAppQuit);
             if(isAppQuit==false)
-                UnityPlayer.UnitySendMessage("AndroidCallUnity","AndroidCall","HeadDown");
+                UnityPlayer.UnitySendMessage("AndroidCallUnity","HeadDown","");
          }
                 break;
             case RobotState.ROBOT_STATE_INDEX_LEFT_WING_ACTIVE_PASSIVE://左翅膀角度
@@ -180,17 +178,6 @@ public class AlertObject implements OnRobotStateChangeListener ,OnClawGameStatus
              UnityPlayer.UnitySendMessage("AndroidCallUnity","AndroidCall","NoHas");
          }
       }
-     // else if(status==ClawGameStatus.INDEX_CHECK_DOLL_TAKE_AWAY)//是否取走
-     // {
-        //  if(num==ClawGameStatus.VALUE_DOLL_ALL_TAKE_AWAY)//已取走
-         // {
-        //      UnityPlayer.UnitySendMessage("AndroidCallUnity","AndroidCall","TakeAway");
-        //  }
-        //  else
-        //  {
-         //     UnityPlayer.UnitySendMessage("AndroidCallUnity","AndroidCall","NoTakeAway");
-        //  }
-     // }
     }
 
     /**
@@ -333,8 +320,6 @@ public class AlertObject implements OnRobotStateChangeListener ,OnClawGameStatus
         }
     }
 
-
-
     //解注
     public void unRegister() {
         RobotManager.getInstance(mContext).unRegisterRightWingActivePassiveChangeListener(this);
@@ -357,8 +342,6 @@ public class AlertObject implements OnRobotStateChangeListener ,OnClawGameStatus
             RobotManager.getInstance(mContext).unRegisterLeftWingActivePassiveChangeListener(this);
         }
     }
-
-
 
     protected static class BaseHandler extends Handler {
         private final WeakReference<AlertObject> mObjects;

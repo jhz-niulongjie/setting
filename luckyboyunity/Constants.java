@@ -32,109 +32,28 @@ import static android.content.ContentValues.TAG;
 
 
 public class Constants {
-   // public static final String LUCKDRAWSTATUS = "/luckDraw/getLuckDrawStatus";
-
-   // public static final String LUCKDRAWQRCODE = "/luckDraw/getLuckDrawQrCode";
-   // public static final String LUCKDRAW = "/luckDraw/addLuckDrawNum";
-    //public static final String LUCKWINGING="/luckDraw/getLuckDrawChance";
-
-    public  enum  IpTypeLuck
-    {
-        PayStatus,
-        QrCode,
-        Probability,
-        Record,
-        RecordList,
-        PhonePayStatus,
-        PhoneSendCode,
-    }
 
     private static final String ROOT_PATH = Environment.getExternalStorageDirectory() + "/efrobot/";
     private static final String URL_TYPE_IN_CONFIG_PATH= ROOT_PATH + "robot_url_in.config";
     private static final String URL_TYPE_OUT_CONFIG_PATH= ROOT_PATH + "robot_url_out.config";
 
     private  static final  String FiveRoundConfig=Environment.getExternalStorageDirectory() + "/.config/.efrobot/game_config";
-      //原测试网址
-    //private static  final String Test_IP="http://39.106.250.170:8083/api/v2/interface/doll/";
-      //原正试网址
-      // private static  final  String IP="http://backend.efrobot.com/api/v2/interface/doll/";
-    //新测试地址
-    private static  final String Test_IP="http://net.wxservice.efrobot.com/v1/";
-    //新正式地址
-    private static  final  String IP="http://gift.game.efrobot.com/v1/";
-    public  static  final  String LuckPayStatus="wxluckDraw/getLuckDrawStatus";
 
-    public  static  final  String LuckDrawQrCode="wxluckDraw/getLuckDrawQrCode";
-
-    public  static  final  String LuckCatchProbability="intranet_grab/queryGrabProbability";
-
-    public  static  final  String LuckCatchRecord="intranet_grab/insertGrabRecord";
-
-    public  static  final  String LuckCatchRecordList="intranet_grab/insertBatchGrabRecord";
-
-    private  static   String    ReadSettingValue="";
+    private  static  String  ReadSettingValue="";
 
 
-    private  static final  String Phone_IP="http://doll.game.efrobot.com/";
-    private  static final  String TestPhone_IP="http://net.wxservice.efrobot.com/";
-
-    //兑换码
-    public static  final String TestPhone_GetPhoneCode="win-record/get-redeem-code";
-    // 支付状态
-    public static  final String TestPhone_PayStatus="v1/wxluckDraw/getLuckDrawStatusNew";
-
-    public  static String  GetIPAddress(IpTypeLuck iptype)
+    //是否是测试环境
+    public  static  boolean IsText()
     {
         File filePath = new File(URL_TYPE_IN_CONFIG_PATH);
-        String ip=filePath.exists()?Test_IP:IP;
-        String ipadress="";
-        switch (iptype)
-        {
-            case PayStatus:
-                ipadress= ip+LuckPayStatus;
-                break;
-            case Probability:
-                ipadress= ip+LuckCatchProbability;
-                break;
-            case QrCode:
-                ipadress= ip+ LuckDrawQrCode;
-                break;
-            case Record:
-                ipadress=  ip+ LuckCatchRecord;
-                break;
-            case RecordList:
-                ipadress= ip+ LuckCatchRecordList;
-                break;
-
-        }
-        L.d(TAG, "GetIPAddress  IpAddress="+ipadress);
-        return ipadress;
+        return  filePath.exists();
     }
-
-    public  static  String GetIPAddressPhone(IpTypeLuck iptype)
-    {
-        File filePath = new File(URL_TYPE_IN_CONFIG_PATH);
-        String ip=filePath.exists()?TestPhone_IP:Phone_IP;
-        String ipadress="";
-        switch (iptype)
-        {
-            case PhonePayStatus:
-                ipadress=ip+TestPhone_PayStatus;
-                break;
-            case PhoneSendCode:
-                ipadress=ip+TestPhone_GetPhoneCode;
-                break;
-        }
-        L.d(TAG, "GetIPAddressPhone  IpAddress="+ipadress);
-        return ipadress;
-    }
-
 
    //设置中的数据
     public  static String  GetGameModeData()
     {
-       // 支付模式|三局|5个题目|pass 3|进入游戏|抓娃娃游戏|开启礼品模式 0
-        String[] values=new String[]{"0","3","5","3","0","0","0"};
+       // 支付模式|三局|5个题目|pass 3|进入游戏|抓娃娃游戏|开启礼品模式 0|是否开启常驻支付页面 0
+        String[] values=new String[]{"0","3","5","3","0","0","0","0"};
         try {
             if(ReadSettingValue==null||ReadSettingValue=="") {
                 ReadSettingValue = ReadSettingValueFun();
@@ -163,6 +82,9 @@ public class Constants {
                 }
                 if(jsonObject.has("reward")) {
                     values[6]=jsonObject.optString("reward");//开启礼品模式 为0 关闭 为1
+                }
+                if(jsonObject.has("code")) {
+                    values[7]=jsonObject.optString("reward");//开启常驻支付页面 为0 关闭 为1
                 }
             }
         }
