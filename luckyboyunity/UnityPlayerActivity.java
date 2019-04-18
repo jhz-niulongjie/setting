@@ -5,13 +5,16 @@ import com.efrobot.library.task.SpeechGroupManager;
 import com.unity3d.player.*;
 import android.app.Activity;
 import android.app.ActivityManager;
+import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.graphics.PixelFormat;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
@@ -64,6 +67,8 @@ public class UnityPlayerActivity extends Activity
     private SpeechGroupManager mGroupManager;
     private int count;
 
+    private static final String GAME_STOP = "com.efrobot.robot.action.GAME_STOP";//游戏切到空闲模式
+
     // Setup activity layout
     @Override protected void onCreate(Bundle savedInstanceState)
     {
@@ -80,6 +85,11 @@ public class UnityPlayerActivity extends Activity
         ClawGameManager.getInstance(getApplicationContext()).init();//初始化
         alerObj=new AlertObject(this);
         timer = new Timer();// 实例化Timer类
+
+        /**********注册游戏停止广播********/
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(GAME_STOP);
+        registerReceiver(receiver, filter);
     }
 
     @Override protected void onNewIntent(Intent intent)
@@ -188,7 +198,7 @@ public class UnityPlayerActivity extends Activity
     // Pass any events not handled by (unfocused) views straight to UnityPlayer
     @Override public boolean onKeyUp(int keyCode, KeyEvent event)     { return mUnityPlayer.injectEvent(event); }
     @Override public boolean onKeyDown(int keyCode, KeyEvent event)   { return mUnityPlayer.injectEvent(event); }
-   // @Override public boolean onTouchEvent(MotionEvent event)          { return mUnityPlayer.injectEvent(event); }
+    @Override public boolean onTouchEvent(MotionEvent event)          {  return mUnityPlayer.injectEvent(event); }
     /*API12*/ public boolean onGenericMotionEvent(MotionEvent event)  { return mUnityPlayer.injectEvent(event); }
 
     public String getRobotId() {
@@ -305,6 +315,8 @@ public class UnityPlayerActivity extends Activity
     public  String GetOnSaleNumberData(){ return   alerObj.jsonOnSaleContent();}
     //更新优惠券状态
     public  void UpdateOnSaleValue(String id){ alerObj.updateOnSaleValue(id);}
+    //改变吆喝语音状态
+    public  void ChangeSpeechModel(int open){ ModeFileUtil.putContent("game_speech_model",open);}
 
   //切到前台
     private  void  MoveForeground()
@@ -345,168 +357,19 @@ public class UnityPlayerActivity extends Activity
 
     }
 
-
-
-    /********************** 下面是下来关闭游戏逻辑 ********************/
-
-    private long startTime = -1;
-    private long endTime = -1;
-    private int touchFirstId = -1;
-    private int touchSecondId = -1;
-    private float touchFirstStartX = -1;
-    private float touchFirstStartY = -1;
-    private float touchSecondStartX = -1;
-    private float touchSecondStartY = -1;
-    private float touchFirstEndX = -1;
-    private float touchFirstEndY = -1;
-    private float touchSecondEndX = -1;
-    private float touchSecondEndY = -1;
-
-    private void initTouchEventData() {
-        startTime = -1;
-        endTime = -1;
-        touchFirstId = -1;
-        touchSecondId = -1;
-        touchFirstStartX = -1;
-        touchFirstStartY = -1;
-        touchSecondStartX = -1;
-        touchSecondStartY = -1;
-        touchFirstEndX = -1;
-        touchFirstEndY = -1;
-        touchSecondEndX = -1;
-        touchSecondEndY = -1;
-    }
-
-    @Override
-    public boolean onTouchEvent(@NonNull MotionEvent event) {
-        switch (event.getActionMasked()) {
-            case MotionEvent.ACTION_DOWN:
-                Log.i(TAG, "viewSizeHandle: down"+event.getActionIndex());
-                Log.e(TAG, "onTouchEvent1: x = " + event.getX() + " , y = " + event.getY() );
-
-                initTouchEventData();
-                touchFirstId = event.getPointerId(event.getActionIndex());
-                startTime = System.currentTimeMillis();
-                touchFirstStartX = event.getX(event.getActionIndex());
-                touchFirstStartY = event.getY(event.getActionIndex());
-
-                if (!(touchFirstStartY < 30 && (touchFirstStartX > 1230 || touchFirstStartX < 70))) {
-                    initTouchEventData();
-                }
-
-                break;
-            case MotionEvent.ACTION_POINTER_DOWN:
-                Log.i(TAG, "viewSizeHandle: point down"+event.getActionIndex());
-
-                //第一个点没有记录
-                if (touchFirstId == -1) {
-                    initTouchEventData();
-                    break;
-                }
-
-                if (touchSecondId != -1 || System.currentTimeMillis() - startTime >= 500) {
-                    initTouchEventData();
-                    break;
-                }
-
-                touchSecondId = event.getPointerId(event.getActionIndex());
-                touchSecondStartX = event.getX(event.getActionIndex());
-                touchSecondStartY = event.getY(event.getActionIndex());
-
-                if (touchSecondStartY >= 30
-                        || (touchSecondStartX <= 1230 && touchSecondStartX >= 70)
-                        || (touchFirstStartX > 700 && touchSecondStartX > 700)
-                        || (touchFirstStartX < 700 && touchSecondStartX < 700)) {
-                    initTouchEventData();
-                }
-                break;
-            case MotionEvent.ACTION_MOVE:
-                Log.i(TAG, "viewSizeHandle-: move"+event.getActionIndex());
-                break;
-            case MotionEvent.ACTION_UP:
-                Log.i(TAG, "viewSizeHandle: up"+event.getActionIndex());
-                Log.e(TAG, "onTouchEvent2: x = " + event.getX() + " , y = " + event.getY() );
-
-                if (touchFirstId == -1 || touchSecondId == -1) {
-                    initTouchEventData();
-                    break;
-                }
-
-                int currentId = event.getPointerId(event.getActionIndex());
-
-                if (currentId == touchFirstId) {
-                    if (touchFirstEndX != -1) {
-                        initTouchEventData();
-                        break;
-                    }
-
-                    touchFirstEndX = event.getX(event.getActionIndex());
-                    touchFirstEndY = event.getY(event.getActionIndex());
-
-                    if (Math.abs(touchFirstEndX - touchFirstStartX) >= 70 || touchFirstEndY <= 750) {
-                        initTouchEventData();
-                        break;
-                    }
-                } else if (currentId == touchSecondId) {
-                    if (touchSecondEndX != -1) {
-                        initTouchEventData();
-                        break;
-                    }
-
-                    touchSecondEndX = event.getX(event.getActionIndex());
-                    touchSecondEndY = event.getY(event.getActionIndex());
-
-                    if (Math.abs(touchSecondEndX - touchSecondStartX) >= 70 || touchSecondEndY <= 750) {
-                        initTouchEventData();
-                        break;
-                    }
-                } else {
-                    initTouchEventData();
-                    break;
-                }
-
-                if (System.currentTimeMillis() - endTime < 500) {
-                    /******************关闭游戏逻辑*********************/
-
-                    UnityPlayer.UnitySendMessage("AndroidCallUnity","CodePageGameQuit","");
-
-                    /******************关闭游戏逻辑*********************/
-                    initTouchEventData();
-                }
-                break;
-            case MotionEvent.ACTION_POINTER_UP:
-                Log.i(TAG, "viewSizeHandle: point up"+event.getActionIndex());
-
-                if (touchFirstId == -1) break;
-
-                int pointerId = event.getPointerId(event.getActionIndex());
-
-                if (pointerId == touchFirstId) {
-                    touchFirstEndX = event.getX(event.getActionIndex());
-                    touchFirstEndY = event.getY(event.getActionIndex());
-
-                    if (Math.abs(touchFirstEndX - touchFirstStartX) >= 70 || touchFirstEndY <= 750) {
-                        initTouchEventData();
-                        break;
-                    }
-                } else if (pointerId == touchSecondId) {
-                    touchSecondEndX = event.getX(event.getActionIndex());
-                    touchSecondEndY = event.getY(event.getActionIndex());
-
-                    if (Math.abs(touchSecondEndX - touchSecondStartX) >= 70 || touchSecondEndY <= 750) {
-                        initTouchEventData();
-                        break;
-                    }
-                } else {
-                    initTouchEventData();
-                    break;
-                }
-
-                endTime = System.currentTimeMillis();
-
-                break;
+   /**************注册游戏停止广播************************/
+    private BroadcastReceiver receiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String action = intent.getAction();
+            if (TextUtils.isEmpty(action)) {
+                return;
+            }
+            if (action.equals(GAME_STOP)) {
+                L.d("SpecialGameQuit", "特殊游戏推出");
+                UnityPlayer.UnitySendMessage("AndroidCallUnity","SpecialGameQuit","");
+            }
         }
-        return true;
-    }
+    };
 
 }

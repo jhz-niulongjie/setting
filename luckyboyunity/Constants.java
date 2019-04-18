@@ -53,7 +53,8 @@ public class Constants {
     public  static String  GetGameModeData()
     {
        // 支付模式|三局|5个题目|pass 3|进入游戏|抓娃娃游戏|开启礼品模式 0|是否开启常驻支付页面 0
-        String[] values=new String[]{"0","3","5","3","0","0","0","0"};
+        //     |是否显示自定义结束弹窗 0 |结束页面显示时间 0|结束页面显示图片路径|结束页面语音数据
+        String[] values=new String[]{"0","3","5","3","0","0","0","0","0","0","",""};
         try {
             if(ReadSettingValue==null||ReadSettingValue=="") {
                 ReadSettingValue = ReadSettingValueFun();
@@ -83,8 +84,20 @@ public class Constants {
                 if(jsonObject.has("reward")) {
                     values[6]=jsonObject.optString("reward");//开启礼品模式 为0 关闭 为1
                 }
-                if(jsonObject.has("code")) {
-                    values[7]=jsonObject.optString("reward");//开启常驻支付页面 为0 关闭 为1
+                if(jsonObject.has("pay_model")) {
+                    values[7]=jsonObject.optString("pay_model");//开启常驻支付页面 为0 关闭 为1
+                }
+                if(jsonObject.has("end_model")) {
+                    values[8]=jsonObject.optString("end_model");//开启自定义结束弹窗 为0 关闭 为1
+                }
+                if(jsonObject.has("show_time")) {
+                    values[9]=jsonObject.optString("show_time");//结束页面显示时间
+                }
+                if(jsonObject.has("inmage_path")) {
+                    values[10]=jsonObject.optString("inmage_path");//结束页面图片路径 以逗号隔开
+                }
+                if(jsonObject.has("lexical_matching")) {
+                    values[11]=jsonObject.optString("lexical_matching");//结束页面语音
                 }
             }
         }
