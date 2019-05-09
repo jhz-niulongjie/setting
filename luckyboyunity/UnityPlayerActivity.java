@@ -357,7 +357,7 @@ public class UnityPlayerActivity extends Activity
 
     }
 
-   /**************注册游戏停止广播************************/
+    /**************注册游戏停止广播************************/
     private BroadcastReceiver receiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -367,7 +367,8 @@ public class UnityPlayerActivity extends Activity
             }
             if (action.equals(GAME_STOP)) {
                 L.d("SpecialGameQuit", "特殊游戏推出");
-                UnityPlayer.UnitySendMessage("AndroidCallUnity","SpecialGameQuit","");
+                int type= intent.getIntExtra("type",0);
+                UnityPlayer.UnitySendMessage("AndroidCallUnity","SpecialGameQuit",String.valueOf(type));
             }
         }
     };
